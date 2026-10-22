@@ -1,0 +1,10 @@
+{
+  "_comment": "Bulwark Lite runtime configuration. Preserved across upstream updates. Edit jmapServerUrl to pin your Stalwart server.",
+  "appName": "Bulwark Webmail",
+  "jmapServerUrl": "",
+  "allowCustomJmapEndpoint": true,
+  "rememberMeEnabled": true,
+  "demoMode": false,
+  "loginShowTotp": true,
+  "loginShowVersion": true
+}

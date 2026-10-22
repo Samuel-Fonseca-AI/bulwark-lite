@@ -1,0 +1,8 @@
+# Workers Static Assets allows 100 dynamic rules.
+# Upstream ships 27 locales x 5 surfaces = 135 splat rules.
+# These five placeholder rules cover every locale and surface.
+/:locale/mail/*      /:locale/mail/index.html      200
+/:locale/calendar/*  /:locale/calendar/index.html  200
+/:locale/contacts/*  /:locale/contacts/index.html  200
+/:locale/files/*     /:locale/files/index.html     200
+/:locale/settings/*  /:locale/settings/index.html  200

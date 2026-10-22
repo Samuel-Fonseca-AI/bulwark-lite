@@ -1,0 +1,273 @@
+name: Sync Bulwark Lite and deploy
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC. GitHub may delay scheduled runs.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to deploy (empty = latest)"
+        required: false
+        type: string
+      force:
+        description: "Re-deploy even when version and digest are unchanged"
+        required: false
+        type: boolean
+        default: false
+      validate_only:
+        description: "Download and validate only; do not deploy or push"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bulwark-lite-sync
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: bulwarkmail/webmail
+  SITE_BRANCH: site
+  JMAP_ORIGIN: ${{ vars.JMAP_ORIGIN }}
+
+jobs:
+  sync:
+    name: Sync and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve target release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_VERSION:-}" ]; then
+            TAG="$INPUT_VERSION"
+          else
+            TAG=$(gh api "repos/${UPSTREAM_REPO}/releases/latest" --jq .tag_name)
+          fi
+          [ -n "$TAG" ] || { echo "::error::Could not resolve a release tag"; exit 1; }
+
+          VERSION="${TAG#v}"
+          ASSET=$(gh api "repos/${UPSTREAM_REPO}/releases/tags/${TAG}" \
+            --jq '.assets[] | select(.name | test("^bulwark-lite-[0-9].*\\.zip$")) | .name' \
+            | head -n1)
+          [ -n "$ASSET" ] || { echo "::error::No bulwark-lite zip in $TAG"; exit 1; }
+
+          DIGEST=$(gh api "repos/${UPSTREAM_REPO}/releases/tags/${TAG}" \
+            --jq ".assets[] | select(.name == \"${ASSET}\") | .digest")
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Resolved $TAG -> $ASSET ($DIGEST)"
+
+      - name: Compare with deployed version
+        id: gate
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          DIGEST: ${{ steps.release.outputs.digest }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          CURRENT_VERSION=$(cat VERSION 2>/dev/null || true)
+          CURRENT_DIGEST=$(jq -r '.sha256 // empty' deployed.json 2>/dev/null || true)
+          echo "current=$CURRENT_VERSION target=$VERSION"
+          if [ "$CURRENT_VERSION" = "$VERSION" ] \
+             && [ "$CURRENT_DIGEST" = "$DIGEST" ] \
+             && [ "${FORCE:-false}" != "true" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already deployed: $VERSION"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download release assets
+        if: steps.gate.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          ASSET: ${{ steps.release.outputs.asset }}
+        run: |
+          set -euo pipefail
+          mkdir -p dl staging
+          gh release download "$TAG" \
+            --repo "$UPSTREAM_REPO" \
+            --pattern "$ASSET" \
+            --pattern "$ASSET.sha256" \
+            --dir dl
+          (cd dl && sha256sum -c "$ASSET.sha256")
+          if ! gh attestation verify "dl/$ASSET" --repo "$UPSTREAM_REPO"; then
+            echo "::warning::Attestation verification failed or is unavailable for $TAG"
+          fi
+
+      - name: Extract, validate and apply overrides
+        if: steps.gate.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          ASSET: ${{ steps.release.outputs.asset }}
+        run: |
+          set -euo pipefail
+          unzip -q "dl/$ASSET" -d staging
+
+          test -f staging/index.html
+          test -f staging/config.json
+          test -f staging/lite-build.json
+
+          BUILT=$(jq -r .version staging/lite-build.json)
+          [ "$BUILT" = "$VERSION" ] || {
+            echo "::error::lite-build.json says $BUILT, expected $VERSION"
+            exit 1
+          }
+
+          COUNT=$(find staging -type f | wc -l)
+          MAX=$(find staging -type f -printf '%s\n' | sort -n | tail -n1)
+          echo "files=$COUNT max_bytes=$MAX"
+          [ "$COUNT" -le 20000 ] || { echo "::error::Too many files"; exit 1; }
+          [ "$MAX" -le 26214400 ] || { echo "::error::A file exceeds 25 MiB"; exit 1; }
+
+          cp config/config.json staging/config.json
+          cp config/_redirects staging/_redirects
+          printf '\n' >> staging/_headers
+          cat config/_headers.extra >> staging/_headers
+
+          if [ -n "${JMAP_ORIGIN:-}" ]; then
+            python3 scripts/patch-csp.py "$JMAP_ORIGIN"
+          fi
+
+          {
+            echo "### Bulwark Lite $VERSION"
+            echo ""
+            echo "- Asset: \`$ASSET\`"
+            echo "- Files: $COUNT"
+            echo "- Largest file: $MAX bytes"
+            echo "- JMAP origin: \`${JMAP_ORIGIN:-not pinned}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check deploy credentials
+        if: steps.gate.outputs.changed == 'true' && inputs.validate_only != true
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WORKER_URL: ${{ vars.WORKER_URL }}
+        run: |
+          set -euo pipefail
+          [ -n "$TOKEN" ] || { echo "::error::Missing secret CLOUDFLARE_API_TOKEN"; exit 1; }
+          [ -n "$ACCOUNT" ] || { echo "::error::Missing variable CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+          [ -n "$WORKER_URL" ] || { echo "::error::Missing variable WORKER_URL"; exit 1; }
+
+      - name: Prepare site branch
+        if: steps.gate.outputs.changed == 'true' && inputs.validate_only != true
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin "$SITE_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$SITE_BRANCH"
+            git worktree add site "origin/$SITE_BRANCH"
+          else
+            git worktree add --detach site
+            git -C site checkout --orphan "$SITE_BRANCH"
+            git -C site rm -rf . || true
+          fi
+
+          rsync -a --delete --exclude '.git' staging/ site/
+          cp LICENSE site/LICENSE
+          cp NOTICE site/NOTICE
+          cp MIRROR-NOTICE.md site/MIRROR-NOTICE.md
+
+          git -C site add -A
+          if ! git -C site diff --cached --quiet; then
+            git -C site commit -m "chore: Bulwark Lite $VERSION"
+          fi
+
+      - name: Deploy to Cloudflare
+        id: deploy
+        if: steps.gate.outputs.changed == 'true' && inputs.validate_only != true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+
+      - name: Smoke test
+        id: smoke
+        if: steps.gate.outputs.changed == 'true' && inputs.validate_only != true
+        env:
+          WORKER_URL: ${{ vars.WORKER_URL }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          check() {
+            local path="$1"
+            local expected="$2"
+            local code=""
+            for _ in 1 2 3 4 5; do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' "$WORKER_URL$path" || true)
+              [ "$code" = "$expected" ] && return 0
+              sleep 5
+            done
+            echo "::error::$path returned $code (expected $expected)"
+            return 1
+          }
+
+          check "/" 200
+          check "/en/mail/" 200
+          check "/en/mail/thread/test" 200
+          check "/config.json" 200
+          check "/lite-build.json" 200
+          curl -fsS "$WORKER_URL/lite-build.json" \
+            | jq -e --arg v "$VERSION" '.version == $v'
+
+      - name: Publish site branch and version
+        if: steps.gate.outputs.changed == 'true' && inputs.validate_only != true && success()
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          DIGEST: ${{ steps.release.outputs.digest }}
+        run: |
+          set -euo pipefail
+          git -C site push --force origin "HEAD:${SITE_BRANCH}"
+
+          jq -n \
+            --arg version "$VERSION" \
+            --arg sha "$DIGEST" \
+            --arg at "$(date -u +%FT%TZ)" \
+            '{version: $version, sha256: $sha, deployed_at: $at}' > deployed.json
+          echo "$VERSION" > VERSION
+
+          git add VERSION deployed.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: deploy Bulwark Lite ${VERSION} [skip ci]"
+            git push origin HEAD:main
+          fi
+
+      - name: Rollback on failed smoke test
+        if: failure() && steps.deploy.outcome == 'success' && steps.smoke.outcome == 'failure'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler rollback --yes || true
