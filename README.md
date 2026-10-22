@@ -127,7 +127,8 @@ El shim solo hace tres cosas:
 
 1. `/<locale>` y `/<locale>/` → `/<locale>/index.html`
 2. `/<locale>/<surface>[/...]` → `/<locale>/<surface>/index.html`
-3. Todo lo demás (`_next`, `config.json`, iconos) → `env.ASSETS.fetch`.
+3. Todo lo demás (`_next`, payloads RSC `.txt`, `config.json`, iconos) →
+   `env.ASSETS.fetch`.
 
 No hay backend ni estado; los archivos siguen siendo estáticos. `html_handling`
 es `none` para que el shim controle las rutas, y `not_found_handling: "404-page"`

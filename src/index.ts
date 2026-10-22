@@ -15,8 +15,8 @@ const SHELLS = new Set([
 ]);
 
 /**
- * Return the shell directory for a locale path, or null when the request is a
- * real file (config.json, _next/..., icons) that should be served as-is.
+ * Return the shell directory for a locale path, or null when the request is
+ * outside a known client shell.
  */
 function shellFor(segments: string[]): string | null {
   if (segments.length === 0) return null;
@@ -37,6 +37,11 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
+    // Serve the real file first: _next assets, RSC .txt payloads, config.json,
+    // icons, and existing index.html files must never be rewritten.
+    const asset = await env.ASSETS.fetch(request);
+    if (asset.status !== 404) return asset;
+
     const url = new URL(request.url);
     const segments = url.pathname.split("/").filter(Boolean);
 
@@ -48,7 +53,7 @@ export default {
       if (shell) targetPath = `/${shell}/index.html`;
     }
 
-    if (!targetPath) return env.ASSETS.fetch(request);
+    if (!targetPath) return asset;
 
     const target = new URL(targetPath, url);
     target.search = url.search;
