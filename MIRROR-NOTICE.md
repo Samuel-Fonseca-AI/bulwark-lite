@@ -11,7 +11,8 @@ patrocinado ni mantenido por Bulwark Mail.
 
 El contenido desplegado se genera a partir de los assets oficiales publicados en
 GitHub Releases. Los únicos cambios son los descritos en `CHANGES.md`:
-`_redirects`, `_headers`, `config.json` y, opcionalmente, el `connect-src` del CSP.
+la eliminación de `_redirects`, `_headers`, `config.json` y, opcionalmente, el
+`connect-src` del CSP. El enrutamiento de deep links lo hace `src/index.ts`.
 
 Bulwark es una marca de sus respectivos titulares. Este espejo no se presenta como
 el sitio oficial.

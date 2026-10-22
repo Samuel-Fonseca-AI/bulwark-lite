@@ -29,8 +29,9 @@ Cada ejecución:
 4. Verifica el checksum y, si está disponible, la atestación de build de GitHub.
 5. Descomprime y valida: `lite-build.json`, archivos requeridos, ≤20,000 archivos
    y ≤25 MiB por archivo.
-6. Sustituye `config.json`, `_redirects` y añade las cabeceras de caché.
-7. Despliega con `wrangler deploy` (sin script de Worker: solo assets estáticos).
+6. Sustituye `config.json`, elimina `_redirects` y añade las cabeceras de caché.
+7. Despliega con `wrangler deploy`: assets estáticos más un shim mínimo de
+   enrutamiento (`src/index.ts`) que sirve el shell correcto para deep links.
 8. Hace smoke test de `/`, `/en/mail/`, un deep link, `/config.json` y
    `/lite-build.json`.
 9. Si todo pasa, publica la rama `site` y actualiza `VERSION` en `main`.
@@ -114,22 +115,26 @@ Crear el token en <https://dash.cloudflare.com/profile/api-tokens> con la planti
 **Edit Cloudflare Workers**, limitado a la cuenta. Añadirlo como secret
 `CLOUDFLARE_API_TOKEN` en **Settings → Secrets and variables → Actions**.
 
-## Límites y decisión sobre `_redirects`
+## Límites y decisión de enrutamiento
 
 El build oficial trae **135 reglas dinámicas** en `_redirects` (27 idiomas × 5
-superficies). Workers Static Assets admite **100**. Por eso `config/_redirects`
-usa cinco reglas con placeholder:
+superficies). Workers Static Assets admite **100**, y además su detector de bucles
+rechaza los destinos que terminan en `index.html` cuando la canonicalización de
+HTML está activa. Por eso el ZIP no se publica con `_redirects`: el enrutamiento
+lo resuelve `src/index.ts`.
 
-```txt
-/:locale/mail/*      /:locale/mail/index.html      200
-...
-```
+El shim solo hace tres cosas:
 
-El build actual tiene 2,549 entradas, 293 MB descomprimidos y un máximo de 2.51 MB
+1. `/<locale>` y `/<locale>/` → `/<locale>/index.html`
+2. `/<locale>/<surface>[/...]` → `/<locale>/<surface>/index.html`
+3. Todo lo demás (`_next`, `config.json`, iconos) → `env.ASSETS.fetch`.
+
+No hay backend ni estado; los archivos siguen siendo estáticos. `html_handling`
+es `none` para que el shim controle las rutas, y `not_found_handling: "404-page"`
+queda como red de seguridad con el `404.html` oficial.
+
+El build actual tiene 2,133 archivos, 293 MB descomprimidos y un máximo de 2.51 MB
 por archivo, dentro de los límites de Workers (20,000 archivos / 25 MiB).
-
-`not_found_handling: "404-page"` queda como red de seguridad: si una regla no
-aplicara, el `404.html` oficial recompone el deep link.
 
 ## Legal
 

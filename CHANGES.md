@@ -4,9 +4,11 @@ Este repositorio redistribuye el build `bulwark-lite-<version>.zip` publicado po
 [bulwarkmail/webmail](https://github.com/bulwarkmail/webmail). El contenido es el
 del release, con estos cambios de despliegue:
 
-1. **`_redirects`**: el build oficial trae 27 idiomas x 5 superficies = 135 reglas
-   con splat. Cloudflare Workers Static Assets admite 100 reglas dinámicas. Se
-   reemplazan por cinco reglas con placeholder (`:locale`), una por superficie.
+1. **Enrutamiento**: el build oficial trae 27 idiomas x 5 superficies = 135 reglas
+   en `_redirects`. Workers Static Assets admite 100 dinámicas y su detector de
+   bucles rechaza destinos `index.html`. Se elimina `_redirects` del despliegue y
+   `src/index.ts` sirve el shell correspondiente para deep links y rutas de
+   directorio.
 2. **`_headers`**: se añade `Cache-Control: no-cache` para `config.json` y
    `lite-build.json`, para que los cambios de configuración y la versión se vean
    en la siguiente carga.

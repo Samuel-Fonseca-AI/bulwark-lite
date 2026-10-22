@@ -148,7 +148,7 @@ jobs:
           [ "$MAX" -le 26214400 ] || { echo "::error::A file exceeds 25 MiB"; exit 1; }
 
           cp config/config.json staging/config.json
-          cp config/_redirects staging/_redirects
+          rm -f staging/_redirects
           printf '\n' >> staging/_headers
           cat config/_headers.extra >> staging/_headers
 
