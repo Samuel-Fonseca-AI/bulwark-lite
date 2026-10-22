@@ -1,0 +1,36 @@
+# Bulwark Lite - Caddy example. Unzip the archive into /var/www/bulwark-lite
+# so that /index.html is served at /.
+webmail.example.com {
+    root * /var/www/bulwark-lite
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy strict-origin-when-cross-origin
+        # connect-src names the JMAP server this bundle was built for.
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' https: data:; connect-src 'self' *; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; media-src 'self' blob:"
+    }
+
+    @manifest path /manifest.webmanifest
+    header @manifest Content-Type application/manifest+json
+
+    # /<locale>/<surface>/anything -> /<locale>/<surface>/index.html
+    @surface path_regexp surface ^/([a-zA-Z-]+)/(mail|calendar|contacts|files|settings)(/.*)?$
+    handle @surface {
+        try_files {path} {path}/ {path}/index.html /{re.surface.1}/{re.surface.2}/index.html
+    }
+
+    handle {
+        try_files {path} {path}/ {path}/index.html
+    }
+
+    file_server
+
+    # Anything else is a real 404, answered by the shim that replays parked deep links.
+    handle_errors {
+        @notfound expression {http.error.status_code} == 404
+        rewrite @notfound /404.html
+        file_server
+    }
+}

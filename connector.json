@@ -1,0 +1,19 @@
+{
+  "product": "bulwark-webmail",
+  "appName": "Bulwark Webmail",
+  "version": "1.17.0",
+  "connectorPath": "/connector",
+  "targets": [
+    "app",
+    "settings",
+    "mail_folder",
+    "calendar",
+    "contacts",
+    "files",
+    "admin",
+    "admin_extension",
+    "admin_plugin",
+    "admin_auth",
+    "setup"
+  ]
+}

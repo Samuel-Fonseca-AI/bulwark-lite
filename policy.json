@@ -1,0 +1,7 @@
+{
+  "_comment": "Optional admin policy for Bulwark Lite (same shape as the admin dashboard's policy). Plugins and sidebar apps stay off in Lite.",
+  "features": {
+    "pluginsEnabled": false,
+    "sidebarAppsEnabled": false
+  }
+}

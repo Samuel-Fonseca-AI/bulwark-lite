@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-8F+ELOULnDv2kN96BzEr9o6CpQkBWCD2ZWDlfkZhTUU='; object-src 'none'; base-uri 'self'"/>
+<meta name="robots" content="noindex">
+<title>Loading</title>
+<script>
+(function () {
+  var locales = ["ar","ca","cs","da","de","en","es","et","fa","fr","he","hu","it","ja","ko","lv","mn","nb","nl","pl","pt","ro","ru","sk","tr","uk","zh","zh-TW"];
+  var fallback = "en";
+  var base = "";
+  function pick(tag) {
+    if (!tag) return null;
+    tag = String(tag);
+    if (locales.indexOf(tag) !== -1) return tag;
+    var lower = tag.toLowerCase();
+    if (lower.indexOf("zh") === 0) {
+      var traditional = /zh-(tw|hk|mo|hant)/.test(lower);
+      if (traditional && locales.indexOf("zh-TW") !== -1) return "zh-TW";
+      if (locales.indexOf("zh") !== -1) return "zh";
+    }
+    var short = lower.split("-")[0];
+    for (var i = 0; i < locales.length; i++) if (locales[i].toLowerCase() === short) return locales[i];
+    return null;
+  }
+  var chosen = null;
+  // The language picked in Settings (stores/locale-store.ts) wins over the browser's list.
+  try {
+    var stored = JSON.parse(localStorage.getItem("locale-storage") || "null");
+    chosen = pick(stored && stored.state && stored.state.locale);
+  } catch (e) {}
+  var langs = navigator.languages || [navigator.language];
+  for (var j = 0; !chosen && j < langs.length; j++) chosen = pick(langs[j]);
+  location.replace(base + "/" + (chosen || fallback) + "/" + location.search + location.hash);
+})();
+</script>
+</head>
+<body><noscript>This app needs JavaScript. <a href="/en/">Continue</a></noscript></body>
+</html>

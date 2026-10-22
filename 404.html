@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-wrWoDIt5E74qKZH+PofRqA6U2NerSaGhmgycz1VAdIo='; object-src 'none'; base-uri 'self'"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>404</title>
+<script>
+(function () {
+  var base = "";
+  var locales = ["ar","ca","cs","da","de","en","es","et","fa","fr","he","hu","it","ja","ko","lv","mn","nb","nl","pl","pt","ro","ru","sk","tr","uk","zh","zh-TW"];
+  var surfaces = ["mail","calendar","contacts","files","settings"];
+  var path = location.pathname;
+  if (base) {
+    if (path !== base && path.indexOf(base + "/") !== 0) return;
+    path = path.slice(base.length) || "/";
+  }
+  var parts = path.split("/").filter(Boolean);
+  if (parts.length < 2 || locales.indexOf(parts[0]) === -1 || surfaces.indexOf(parts[1]) === -1) return;
+  var target = base + "/" + parts[0] + "/" + parts[1] + "/";
+  // The shell itself is missing (host misconfigured): show the 404 instead of looping.
+  if (location.pathname === target) return;
+  try { sessionStorage.setItem("bulwark-lite:pending-path", location.pathname + location.search); } catch (e) {}
+  location.replace(target);
+})();
+</script>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, sans-serif; background: #fff; color: #111; }
+  @media (prefers-color-scheme: dark) { body { background: #0a0a0a; color: #ededed; } }
+  main { text-align: center; padding: 1rem; }
+  h1 { font-size: 2.25rem; margin: 0 0 .5rem; }
+  p { margin: 0 0 1.5rem; opacity: .7; }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>404</h1>
+  <p>This page could not be found.</p>
+  <a href="/">Go home</a>
+</main>
+</body>
+</html>

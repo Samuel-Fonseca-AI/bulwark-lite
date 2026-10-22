@@ -1,0 +1,41 @@
+# Bulwark Lite - nginx example. Unzip the archive into /var/www/bulwark-lite
+# so that /index.html is served at /; deep links below a surface
+# are rewritten to that surface's shell.
+server {
+    listen 80;
+    server_name webmail.example.com;
+    root /var/www/bulwark-lite;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    # connect-src names the JMAP server this bundle was built for. Every page
+    # also carries a <meta> policy that allows only its own inline scripts.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' https: data:; connect-src 'self' *; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; media-src 'self' blob:" always;
+
+    # Hashed assets never change. (add_header inside a location replaces the
+    # inherited set, so the security headers are repeated here.)
+    location /_next/static/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header X-Frame-Options SAMEORIGIN always;
+        add_header Referrer-Policy strict-origin-when-cross-origin always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' https: data:; connect-src 'self' *; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; media-src 'self' blob:" always;
+    }
+
+    # Older mime.types files do not know the PWA manifest extension.
+    location = /manifest.webmanifest {
+        types { }
+        default_type application/manifest+json;
+    }
+
+    # /<locale>/<surface>/anything -> /<locale>/<surface>/index.html
+    location ~ ^/(?<locale>[a-zA-Z-]+)/(?<surface>mail|calendar|contacts|files|settings)(/.*)?$ {
+        try_files $uri $uri/ $uri/index.html /$locale/$surface/index.html;
+    }
+
+    location / {
+        try_files $uri $uri/ $uri/index.html =404;
+        error_page 404 /404.html;
+    }
+}
