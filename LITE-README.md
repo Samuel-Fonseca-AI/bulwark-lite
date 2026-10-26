@@ -1,4 +1,4 @@
-# Bulwark Lite 1.17.0 (0650067)
+# Bulwark Lite 1.17.2 (4efb9a2)
 
 A static build of Bulwark Webmail: the same mail, calendar, contacts and files
 client, without the Node.js server. Upload this folder to any static host and

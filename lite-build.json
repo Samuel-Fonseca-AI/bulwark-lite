@@ -1,8 +1,8 @@
 {
-  "version": "1.17.0",
-  "commit": "0650067",
+  "version": "1.17.2",
+  "commit": "4efb9a2",
   "target": "static",
-  "buildId": "1.17.0-0650067-tna1wj",
+  "buildId": "1.17.2-4efb9a2-tnfjwn",
   "basePath": "",
   "locales": [
     "ar",
@@ -34,5 +34,5 @@
     "zh",
     "zh-TW"
   ],
-  "builtAt": "2026-10-21T21:49:10.234Z"
+  "builtAt": "2026-10-24T21:06:16.413Z"
 }
