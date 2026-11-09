@@ -1,0 +1,4 @@
+;!function(){try { var e="undefined"!=typeof globalThis?globalThis:"undefined"!=typeof global?global:"undefined"!=typeof window?window:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&((e._debugIds|| (e._debugIds={}))[n]="eb543998-7d8e-9945-5a5d-cd54941ed18c")}catch(e){}}();
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,220791,e=>{"use strict";e.S([429178,"EMAIL_PUSH_CAPABILITY,d,EMAIL_PUSH_PROPERTIES,I,WebPushUnsupportedError,y,buildEmailPushConfig,z,disableWebPush,$,dropAllWebPushRegistrations,G,enableWebPush,e,enableWebPushForAccounts,f,endWebPushForSignOut,p,isWebPushEnabled,T,isWebPushSupported,a,listPushDevices,Z,mailAccountsWithoutPush,q,resetWebPushResyncState,O,resyncWebPush,v,revokePushDevice,_,serverSupportsEmailPush,k,waitForWebPushResync,J",0,829422,"DEFAULT_RELAY_BASE_URL,i"])}]);
+
+//# debugId=eb543998-7d8e-9945-5a5d-cd54941ed18c

@@ -1,7 +1,7 @@
 {
   "product": "bulwark-webmail",
   "appName": "Bulwark Webmail",
-  "version": "1.17.2",
+  "version": "1.21.0",
   "connectorPath": "/connector",
   "targets": [
     "app",

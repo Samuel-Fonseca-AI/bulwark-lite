@@ -1,11 +1,11 @@
-# Bulwark Lite 1.17.2 (4efb9a2)
+# Bulwark Lite 1.21.0 (6a0a1ca)
 
 A static build of Bulwark Webmail: the same mail, calendar, contacts and files
 client, without the Node.js server. Upload this folder to any static host and
 point it at your Stalwart (or other JMAP) server.
 
 Built for mount path: / (site root)
-Locales included: ar, ca, cs, da, de, en, es, et, fa, fr, he, hu, it, ja, ko, lv, mn, nb, nl, pl, pt, ro, ru, sk, tr, uk, zh, zh-TW
+Locales included: ar, ca, cs, da, de, el, en, es, et, fa, fr, he, hu, it, ja, ko, lv, mn, nb, nl, nn, pl, pt, ro, ru, sk, th, tr, uk, vi, zh, zh-TW
 
 ## Three steps
 
@@ -19,17 +19,32 @@ Locales included: ar, ca, cs, da, de, en, es, et, fa, fr, he, hu, it, ja, ko, lv
      while `jmapServerUrl` is empty.
    - `rememberMeEnabled`: `false` never remembers a sign-in (sessions then end with the tab).
      Sign-ins are otherwise remembered; `loginShowRememberMe: true` lets people choose.
+   - `noThirdPartyTraffic`: `true` keeps the browser off every built-in outside host
+     (no Google Maps links on event addresses; see the third-party traffic docs).
+   - `oauthRevokeOnSignOut`: `false` keeps the refresh token valid at the server on
+     sign-out, so Stalwart 1.0 does not ask for consent again on the next sign-in.
    Optional keys: `demoMode`, `jmapServers`, `jmapServerAutoPickByDomain`, the login logo/company/link keys and `loginShow*` toggles (same names as the Docker env vars, camelCased).
-3. Allow the browser to talk to the mail server (CORS). In Stalwart:
+3. Allow the browser to talk to the mail server (CORS). In Stalwart, turn on
+   the `usePermissiveCors` setting of the `Http` object: in the web admin
+   under **Settings > Network > HTTP > Security** ("Permissive CORS policy"),
+   or with
 
-   ```toml
-   [http]
-   permissive-cors = true
+   ```bash
+   stalwart-cli update Http --field usePermissiveCors=true
+   stalwart-cli create Action/ReloadSettings
    ```
 
-   or an equivalent reverse-proxy rule that allows your Lite origin with the
+   or over JMAP as an administrator: `x:Http/set` with
+   `{"update": {"singleton": {"usePermissiveCors": true}}}`. It applies once
+   the settings are reloaded (the `ReloadSettings` action) or Stalwart
+   restarts. On the current 1.0 pre-releases `ReloadSettings` fails while the
+   stock spam-filter rules are loaded, so restart Stalwart there instead.
+   Stalwart 0.16 and later ignore the `[http] permissive-cors` key of the old
+   TOML configuration.
+
+   A reverse-proxy rule works too if it allows your Lite origin with the
    `Authorization` and `Content-Type` headers on `/.well-known/jmap`, `/jmap/*`,
-   `/api/auth` and `/auth/token`.
+   `/api/auth`, `/auth/token` and, for Stalwart 1.0, `/auth/register`.
 
 ## Host configuration
 
@@ -52,11 +67,17 @@ multiple accounts, calendar, contacts, files, themes, settings export/import,
 password and TOTP login, demo mode, deep links.
 
 Not available in Lite (they need the Node.js server): the admin console and
-setup wizard, plugins and sidebar apps, settings sync across devices, OAuth /
-SSO login, the account security tab (app passwords, 2FA setup), ICS URL
-subscriptions and CalDAV discovery, sender favicons, office (WOPI) editing,
-web push notifications, the update banner, device pairing, and the
-"Default apps" page (registering Lite as the mailto:/webcal: handler).
+setup wizard, plugins and sidebar apps, settings sync across devices, the
+account security tab (app passwords, 2FA setup), ICS URL subscriptions and
+CalDAV discovery, sender favicons, office (WOPI) editing, web push
+notifications, the update banner, device pairing, and the "Default apps" page
+(registering Lite as the mailto:/webcal: handler).
+
+OAuth / SSO login is not in this build. It is in Lite when Stalwart serves it
+as an Application (`npm run build:lite -- --target=stalwart`, or the
+`bulwark-lite-stalwart.zip` of a release): accounts whose domain signs in at an
+OpenID provider are sent there, and setting the Application's
+`oauthClientId` adds **Sign in with SSO**. That bundle's README explains it.
 
 ## Security notes
 

@@ -1,8 +1,8 @@
 {
-  "version": "1.17.2",
-  "commit": "4efb9a2",
+  "version": "1.21.0",
+  "commit": "6a0a1ca",
   "target": "static",
-  "buildId": "1.17.2-4efb9a2-tnfjwn",
+  "buildId": "1.21.0-6a0a1ca-to5jsw",
   "basePath": "",
   "locales": [
     "ar",
@@ -10,6 +10,7 @@
     "cs",
     "da",
     "de",
+    "el",
     "en",
     "es",
     "et",
@@ -24,15 +25,18 @@
     "mn",
     "nb",
     "nl",
+    "nn",
     "pl",
     "pt",
     "ro",
     "ru",
     "sk",
+    "th",
     "tr",
     "uk",
+    "vi",
     "zh",
     "zh-TW"
   ],
-  "builtAt": "2026-10-24T21:06:16.413Z"
+  "builtAt": "2026-11-07T22:01:52.702Z"
 }

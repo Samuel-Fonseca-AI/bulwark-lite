@@ -1,0 +1,4 @@
+;!function(){try { var e="undefined"!=typeof globalThis?globalThis:"undefined"!=typeof global?global:"undefined"!=typeof window?window:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&((e._debugIds|| (e._debugIds={}))[n]="95e5f73d-2a21-09f3-da75-c08e6bb36a50")}catch(e){}}();
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,483762,e=>{"use strict";let l=(0,e.i(768834).f)()((e,l)=>({isOpen:!1,resolve:null,requestTotp:()=>{let t=l().resolve;return t&&t(null),new Promise(l=>{e({isOpen:!0,resolve:l})})},submit:t=>{let{resolve:s}=l();s&&s(t),e({isOpen:!1,resolve:null})},cancel:()=>{let{resolve:t}=l();t&&t(null),e({isOpen:!1,resolve:null})}}));e.s(["useTotpReauthStore",0,l])}]);
+
+//# debugId=95e5f73d-2a21-09f3-da75-c08e6bb36a50
