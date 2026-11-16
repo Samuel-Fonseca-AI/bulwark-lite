@@ -1,4 +1,4 @@
-# Bulwark Lite 1.21.0 (6a0a1ca)
+# Bulwark Lite 1.21.2 (933bc18)
 
 A static build of Bulwark Webmail: the same mail, calendar, contacts and files
 client, without the Node.js server. Upload this folder to any static host and
@@ -55,7 +55,8 @@ Deep links such as `/en/mail/thread/abc` are served by the shell at
 - nginx: see `nginx.conf.example`.
 - Caddy: see `Caddyfile.example`.
 - GitHub Pages and other hosts without rewrites: `404.html` replays the link
-  in the browser. It works, with one extra page load.
+  in the browser. It works, with one extra page load. Such hosts usually send
+  none of the headers in `_headers` either (see Security notes).
 
 `_headers` also carries the recommended security headers. Adjust
 `connect-src` to your JMAP server's origin if you prefer a strict policy.
@@ -83,17 +84,35 @@ OpenID provider are sent there, and setting the Application's
 
 - No cookies and no server session. Requests to the mail server carry the
   token or credentials of the signed-in account only.
-- "Remember me" keeps a Stalwart refresh token in the browser's localStorage
-  (a plain token, never the password). Without "remember me" the token lives
-  in sessionStorage and the session ends with the tab. Both are readable by
-  any script running on your Lite origin, so serve Lite from an origin you
-  control and keep the Content-Security-Policy from `_headers`.
+- "Remember me" keeps a Stalwart refresh token in the browser's localStorage,
+  never the password; without "remember me" it lives in sessionStorage and
+  the session ends with the tab. Tokens are stored sealed with a key the
+  browser keeps in IndexedDB and lets no script copy out, so a script that
+  reads web storage finds no token and what is stored is of no use outside
+  this browser profile. A script running on your Lite origin can still use
+  that key while the browser holds it, so serve Lite from a host name of its
+  own that you control (not one that also serves files people upload) and
+  keep the Content-Security-Policy from `_headers`. Where IndexedDB is
+  blocked or does not answer, a sign-in lasts only as long as the page.
+- Serve Lite over HTTPS. On a plain http:// address other than localhost,
+  browsers withhold the Web Crypto API the token sign-in needs, so Lite falls
+  back to Basic auth with the password kept in sessionStorage for the tab (see
+  the next point), and they send no fetch metadata (`Sec-Fetch-*` headers)
+  with its requests. Several of the protections described here assume HTTPS.
 - Servers without Stalwart's token login (`/api/auth`) fall back to Basic
   auth. "Remember me" is then hidden; the credentials stay in sessionStorage
   for the lifetime of the tab so a reload does not sign you out. The same
   fallback applies when a reverse proxy in front of Stalwart answers
   `/api/auth` without CORS headers: the login still works, but "remember me"
   then only lasts for the tab, so add the CORS rule from step 3 there too.
-- Because the export contains inline scripts, `script-src` must allow
-  `'unsafe-inline'`. Email HTML is still rendered sanitised in a sandboxed
-  frame, exactly as in the full build.
+- Every page carries a `<meta>` Content-Security-Policy that runs only its
+  own inline scripts (by hash) and scripts from its own origin, so the
+  `'unsafe-inline'` in the header policy changes nothing where both apply.
+  Each page also refuses to run inside another site's frame. Email HTML is
+  still rendered sanitised in a sandboxed frame, exactly as in the full build.
+- A `<meta>` can't carry the rest of `_headers`. Hosts that send no headers
+  of their own, such as GitHub Pages or a plain S3 bucket, go without
+  `frame-ancestors` and `X-Frame-Options` (the pages' own refusal stands in),
+  `X-Content-Type-Options: nosniff`, the `connect-src`, `img-src`,
+  `frame-src` and `form-action` limits, `Referrer-Policy` and
+  `Permissions-Policy`. Prefer a host that sends them.

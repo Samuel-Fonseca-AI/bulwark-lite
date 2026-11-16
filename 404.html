@@ -1,7 +1,34 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-bROpgfJ8wygjFlPROZJsGStncqLcRbodttbFczmPFeY=' 'sha256-1bGGOFD7tvmJvQ90K5yuTK10zedmLIkqO1XPVv33K6A='; object-src 'none'; base-uri 'self'"/>
+<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="script-src 'self' 'sha256-eSC35jBBI+I1Xf5PW4o/tNw+jRmWkhRfw47YQJ6BSXA=' 'sha256-bROpgfJ8wygjFlPROZJsGStncqLcRbodttbFczmPFeY=' 'sha256-1bGGOFD7tvmJvQ90K5yuTK10zedmLIkqO1XPVv33K6A='; object-src 'none'; base-uri 'self'"/><script data-bulwark-frame-guard="">(function () {
+  var isForeignFrame = function isForeignFrame(win, allowed) {
+  var foreign = false;
+  try {
+    for (var w = win; w !== w.parent; w = w.parent) {
+      if (w.parent.location.origin !== win.location.origin) { foreign = true; break; }
+    }
+  } catch {
+    foreign = true;
+  }
+  if (!foreign || !allowed) return foreign;
+  var origins = win.location.ancestorOrigins;
+  if (origins && origins.length) {
+    for (var i = 0; i < origins.length; i++) if (origins[i] !== win.location.origin && origins[i] !== allowed) return true;
+    return false;
+  }
+  try { return new URL(win.document.referrer).origin !== allowed; } catch { return true; }
+};
+  if (!isForeignFrame(window, "")) return;
+  try { window.stop(); } catch (e) {}
+  // Built with the DOM, not markup: the build finds where the page policy goes
+  // by searching each page for its head and charset tags, this text included.
+  document.documentElement.replaceChildren(document.createElement("head"), document.createElement("body"));
+  var p = document.createElement("p");
+  p.textContent = "Bulwark Webmail cannot be shown inside another site's page. Open it directly.";
+  p.style.cssText = "font:16px/1.5 system-ui,sans-serif;max-width:36rem;margin:20vh auto 0;padding:1rem;text-align:center";
+  document.body.appendChild(p);
+})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>404</title>
